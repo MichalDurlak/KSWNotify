@@ -3,6 +3,9 @@ import time
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
 
 #PATH TO FILE WITH SETTINGS
 file_path = "settings.ini"
@@ -65,8 +68,26 @@ def compare_records(object):
     else:
         return False
 
-# def sendingNotification(ksw_events):
-#     break
+def sendingNotification(ksw_events):
+    SMTP_SERVER = get_option_value("Settings", "smtpserver")
+    SMTP_USERNAME = get_option_value("Settings", "smtpusername")
+    SMTP_PASSWORD = get_option_value("Settings", "smtppassword")
+######
+
+    msg = MIMEMultipart()
+    msg['From'] = get_option_value("Settings", "smtpfrom")
+    msg['To'] = get_option_value("Settings", "smtpto")
+    msg['Subject'] = f"KSW ALERT 🚨 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    TEXT = f"NOWY EVENT SIE POKAZAL NA STRONIE \n strona: {get_option_value('Settings', 'kswurl')} \n Nowe dostepne bilety: \n " + "\n".join(ksw_events)
+
+
+    msg.attach(MIMEText(TEXT, 'plain'))
+    server = smtplib.SMTP(SMTP_SERVER)
+    server.starttls()
+    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+    server.sendmail(msg['From'], msg['To'], msg.as_string())
+    server.quit()
+
 
 def main():
     ksw_events = get_ksw_events()
@@ -75,6 +96,7 @@ def main():
     else:
         print("Something changed. Saving new file and sending info.")
         save_records(ksw_events)
+        sendingNotification(ksw_events)
 
 
 
