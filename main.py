@@ -60,12 +60,15 @@ def save_records(object):
         file.write("\n".join(object))
 
 def compare_records(object):
-    with open(get_option_value("Settings","resultfile"), 'r') as file:
-        next(file)
-        file_content = file.read().splitlines()
-    if(file_content == object):
-        return True
-    else:
+    try:
+        with open(get_option_value("Settings","resultfile"), 'r') as file:
+            next(file)
+            file_content = file.read().splitlines()
+        if(file_content == object):
+            return True
+        else:
+            return False
+    except FileNotFoundError:
         return False
 
 def sendingNotification(ksw_events):
