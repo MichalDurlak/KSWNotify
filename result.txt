@@ -1,3 +1,5 @@
-Last File Update: 2025-02-24 19:36:43
-XTB KSW 104,08-03-2025,19:00:00,Gorzów WIelkopolski
+Last File Update: 2025-06-19 23:05:19
+XTB KSW 108,19-07-2025,19:00:00,Hala Urania, Olsztyn
+XTB KSW 109,09-08-2025,19:00:00,ATM Studio, Warszawa
+XTB KSW 110,20-09-2025,19:00:00,Hala Podpromie, Rzeszów
 XTB KSW 111,18-10-2025,19:00:00,Werk Arena, Trinec, Czechy
