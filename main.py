@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
 import configparser
 import time
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
@@ -25,7 +27,20 @@ def get_option_value(section, key):
 
 def get_ksw_events():
     URL = get_option_value("Settings", "kswurl")
-    driver = webdriver.Chrome()
+
+    #USE LOCAL WEBDRIVER-CHROME
+    # options = Options()
+    # options.add_argument("--headless")
+    # options.add_argument("--user-data-dir=/tmp/user-data")
+    # options.add_argument("--no-sandbox")
+    # driver = webdriver.Chrome(options=options)
+    # driver = webdriver.Chrome()
+
+    #USER REMOTE WEBDRIVER-CHROME
+    options = webdriver.ChromeOptions()
+    options.add_argument("--start-maximized")
+    driver = webdriver.Remote(command_executor=get_option_value("Settings", "selenium_remote_address"), options=options)
+
     driver.get(URL)
     time.sleep(2)
 
@@ -50,6 +65,7 @@ def get_ksw_events():
         ksw_events.append(recordTemp)
 
     # print(ksw_events)
+    driver.quit()
     return ksw_events
 
 def save_records(object):
@@ -91,8 +107,13 @@ def sendingNotification(ksw_events):
     server.sendmail(msg['From'], msg['To'], msg.as_string())
     server.quit()
 
+def save_date_time_of_run():
+    current_dateTime = "Last File Update: "+datetime.now().strftime('%Y-%m-%d %H:%M:%S')+"\n"
+    with open(get_option_value("Settings","lastrunfile"), 'w') as file:
+        file.write(current_dateTime)
 
 def main():
+    save_date_time_of_run()
     ksw_events = get_ksw_events()
     if(compare_records(ksw_events)):
         print("Values are the same. Skipping...")
