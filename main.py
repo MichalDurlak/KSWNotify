@@ -1,13 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 import configparser
 import time
 from datetime import datetime
+import msal
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
+import requests
 
 #PATH TO FILE WITH SETTINGS
 file_path = "settings.ini"
@@ -87,7 +89,7 @@ def compare_records(object):
     except FileNotFoundError:
         return False
 
-def sendingNotification(ksw_events):
+def sendingNotification_smtp(ksw_events):
     SMTP_SERVER = get_option_value("Settings", "smtpserver")
     SMTP_USERNAME = get_option_value("Settings", "smtpusername")
     SMTP_PASSWORD = get_option_value("Settings", "smtppassword")
@@ -107,6 +109,63 @@ def sendingNotification(ksw_events):
     server.sendmail(msg['From'], msg['To'], msg.as_string())
     server.quit()
 
+def sendingNotification_graph(ksw_events):
+    GRAPH_TENANT_ID = get_option_value("Settings", "graph_tenant_id")
+    GRAPH_CLIENT_ID = get_option_value("Settings", "graph_client_id")
+    GRAPH_SECRET_APP = get_option_value("Settings", "graph_secret")
+    GRAPH_SHARED_MAILBOX = get_option_value("Settings", "graph_shared_mailbox")
+    NOTIFY_USER = get_option_value("Settings", "notify_email")
+
+    email_content = f"NOWY EVENT SIE POKAZAL NA STRONIE \n strona: {get_option_value('Settings', 'kswurl')} \n Nowe dostepne bilety: \n " + "\n".join(
+        ksw_events)
+
+    def acquire_token():
+        authority_url = f'https://login.microsoftonline.com/{GRAPH_TENANT_ID}'
+        app = msal.ConfidentialClientApplication(
+            authority=authority_url,
+            client_id=GRAPH_CLIENT_ID,
+            client_credential=GRAPH_SECRET_APP
+        )
+        token = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
+        return token
+
+    result = acquire_token()
+
+    if "access_token" in result:
+        print("✅ Access token acquired")
+        access_token = result["access_token"]
+
+
+        endpoint = f'https://graph.microsoft.com/v1.0/users/{GRAPH_SHARED_MAILBOX}/sendMail'
+
+        email_msg = {
+            'message': {
+                'subject': f"KSW ALERT 🚨 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                'body': {
+                    'contentType': 'Text',
+                    'content': email_content
+                },
+                'toRecipients': [
+                    {'emailAddress': {'address': NOTIFY_USER}}
+                ]
+            },
+            'saveToSentItems': 'true'
+        }
+
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+
+        response = requests.post(endpoint, headers=headers, json=email_msg)
+        if response.ok:
+            print('✅ Sent email successfully')
+        else:
+            print('❌ Błąd:', response.status_code, response.json())
+
+    else:
+        print("❌ Błąd autoryzacji:", result.get("error_description"))
+
 def save_date_time_of_run():
     current_dateTime = "Last File Update: "+datetime.now().strftime('%Y-%m-%d %H:%M:%S')+"\n"
     with open(get_option_value("Settings","lastrunfile"), 'w') as file:
@@ -120,7 +179,11 @@ def main():
     else:
         print("Something changed. Saving new file and sending info.")
         save_records(ksw_events)
-        sendingNotification(ksw_events)
+        if(get_option_value("Settings", "use_smtp_to_send_email") == "yes"):
+            sendingNotification_smtp(ksw_events)
+        if (get_option_value("Settings", "use_graph_to_send_email") == "yes"):
+            sendingNotification_graph(ksw_events)
+
 
 
 
