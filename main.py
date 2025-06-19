@@ -157,7 +157,7 @@ def sendingNotification_graph(ksw_events):
             'Content-Type': 'application/json'
         }
 
-        response = requests.post(endpoint, headers=headers, json=email_msg)
+        response = requests.post(endpoint, headers=headers, json=email_msg, timeout=10)
         if response.ok:
             print('✅ Sent email successfully')
         else:
